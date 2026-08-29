@@ -1,4 +1,6 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
+import { cookies } from "next/headers";
+import { hasSupabaseSessionCookie, readSupabaseSession, sessionUserFromSession } from "@/lib/supabase/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { FavoriteRecord, FollowRecord, FollowTargetType, NotificationSettings, UserProfile } from "@/types/user";
 
@@ -7,9 +9,22 @@ export type AuthContext = { client: SupabaseClient; user: User };
 
 // 所有个人数据查询先经过这里，确保页面和接口都使用同一个登录用户。
 export async function getAuthContext(): Promise<AuthContext | null> {
-  const client = await createSupabaseServerClient();
+  const cookieStore = await cookies();
+  if (!hasSupabaseSessionCookie(cookieStore)) return null;
+  const client = await createSupabaseServerClient(cookieStore);
   const { data } = await client.auth.getUser();
   return data.user ? { client, user: data.user } : null;
+}
+
+// 发帖写入链路只需要本地 cookie 中的 session，不需要再打一次 Supabase Auth。
+export async function getFastAuthContext(): Promise<AuthContext | null> {
+  const cookieStore = await cookies();
+  if (!hasSupabaseSessionCookie(cookieStore)) return null;
+  const client = await createSupabaseServerClient(cookieStore);
+  const session = await readSupabaseSession(cookieStore);
+  if (!session) return null;
+  const user = sessionUserFromSession(session);
+  return user ? { client, user } : null;
 }
 
 export async function getMyProfile(context: AuthContext) {

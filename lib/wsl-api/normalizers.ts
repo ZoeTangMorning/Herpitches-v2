@@ -16,11 +16,11 @@ function num(raw: RawRecord, key: string) {
 
 function status(raw: RawRecord): FixtureStatus {
   const value = (text(raw, "strStatus") ?? "").toLowerCase();
-  if (value.includes("match finished")) return "finished";
-  if (value.includes("not started")) return "scheduled";
+  if (["ft", "aet", "pen", "finished", "match finished"].some((item) => value.includes(item))) return "finished";
+  if (["ns", "not started", "scheduled", "tbd"].some((item) => value.includes(item))) return "scheduled";
   if (value.includes("postponed")) return "postponed";
   if (value.includes("cancelled")) return "cancelled";
-  if (value.includes("live")) return "live";
+  if (["live", "1h", "2h", "ht", "et"].some((item) => value.includes(item))) return "live";
   return "unknown";
 }
 

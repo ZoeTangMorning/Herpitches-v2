@@ -19,6 +19,13 @@ export function BottomNavigation() {
 
   useEffect(() => {
     let cancelled = false;
+    if (!hasSupabaseSessionCookie()) {
+      setState("guest");
+      setProfile(null);
+      return () => {
+        cancelled = true;
+      };
+    }
     fetch("/api/profile")
       .then(async (response) => {
         if (response.status === 401) return null;
@@ -87,4 +94,9 @@ function shortName(name: string) {
   const words = name.trim().split(/\s+/).filter(Boolean);
   if (words.length > 1) return words.map((word) => word[0]).join("").slice(0, 2).toUpperCase();
   return name.trim().slice(0, 2).toUpperCase();
+}
+
+function hasSupabaseSessionCookie() {
+  if (typeof document === "undefined") return false;
+  return document.cookie.split(";").some((item) => item.trim().includes("-auth-token="));
 }

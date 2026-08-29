@@ -30,7 +30,7 @@ test("community uses server-backed posts and keeps herpitches as the default", a
   const migration = await source("supabase/migrations/007_community_posts.sql");
 
   assert.match(communityPage, /getCommunityPosts\(context, HERPITCHES_COMMUNITY\.id\)/);
-  assert.match(board, /fetch\(`\/api\/community\/posts\?communityId=/);
+  assert.match(board, /fetchWithTimeout\(`\/api\/community\/posts\?communityId=/);
   assert.match(board, /targetType="post"/);
   assert.match(postsApi, /export async function POST/);
   assert.match(migration, /create table if not exists public\.community_posts/);
@@ -39,6 +39,24 @@ test("community uses server-backed posts and keeps herpitches as the default", a
   assert.match(board, /useState\(HERPITCHES_COMMUNITY\.id\)/);
   assert.match(board, /onTouchStart/);
   assert.match(board, /delta > 60/);
+});
+
+test("community post submission uses fast local session lookup before writing", async () => {
+  const board = await source("components/community/community-board.tsx");
+  const queries = await source("lib/supabase/queries.ts");
+  const postsApi = await source("app/api/community/posts/route.ts");
+
+  assert.match(board, /AbortController/);
+  assert.match(board, /发布超时，请稍后重试。/);
+  assert.match(board, /帖子至少需要 2 个字。/);
+  assert.match(board, /帖子不能超过 500 个字。/);
+  assert.match(board, /maxLength={MAX_POST_LENGTH}/);
+  assert.match(postsApi, /Promise\.race/);
+  assert.match(postsApi, /TIMEOUT/);
+  assert.match(postsApi, /getFastAuthContext\(\)/);
+  assert.doesNotMatch(postsApi, /getAuthContext\(\)/);
+  assert.match(queries, /readSupabaseSession/);
+  assert.match(queries, /sessionUserFromSession/);
 });
 
 test("following a team or player exposes a matching server-backed community", async () => {
@@ -65,4 +83,19 @@ test("community posts support post likes and personal history", async () => {
   assert.match(postValidation, /content\.length > maxLength/);
   assert.match(mePage, /href="\/me\/posts" label="我的帖子"/);
   assert.match(myPostsPage, /getMyCommunityPosts/);
+});
+
+test("supabase auth lookups short-circuit before remote user checks", async () => {
+  const queries = await source("lib/supabase/queries.ts");
+  const communityContext = await source("lib/supabase/community-context.ts");
+  const middleware = await source("lib/supabase/middleware.ts");
+  const rootMiddleware = await source("middleware.ts");
+  const bottomNavigation = await source("components/layout/bottom-navigation.tsx");
+
+  assert.match(queries, /hasSupabaseSessionCookie/);
+  assert.match(queries, /if \(!hasSupabaseSessionCookie\(cookieStore\)\) return null;/);
+  assert.match(communityContext, /if \(!hasSupabaseSessionCookie\(cookieStore\)\)/);
+  assert.match(middleware, /if \(!hasSupabaseSessionCookie\(request\.cookies\)\)/);
+  assert.match(rootMiddleware, /matcher: \["\/auth\/callback"\]/);
+  assert.match(bottomNavigation, /document\.cookie/);
 });

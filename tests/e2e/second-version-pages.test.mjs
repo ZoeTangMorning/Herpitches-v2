@@ -70,6 +70,7 @@ test("recent fixtures render square team badges from the teamId image folder", a
 
 test("Arsenal Women demo roster links to three complete player profiles", async () => {
   const adapter = await source("lib/wsl-api/adapter.ts");
+  const manualArsenal = await source("lib/wsl-api/manual-arsenal.ts");
   const mockAdapter = await source("lib/wsl-api/mock-adapter.ts");
   const playerPage = await source("app/(main)/data/players/[playerId]/page.tsx");
   const playerAvatar = await source("components/data/player-avatar.tsx");
@@ -78,9 +79,12 @@ test("Arsenal Women demo roster links to three complete player profiles", async 
   for (const playerId of ["mock-arsenal-russo", "mock-arsenal-williamson", "mock-arsenal-caldentey"]) {
     assert.match(mockAdapter, new RegExp(`id: "${playerId}"`));
   }
-  assert.match(adapter, /playerId\.startsWith\("mock-"\)/);
-  assert.match(adapter, /ARSENAL_WOMEN_API_TEAM_ID = "140219"/);
-  assert.match(adapter, /team\.id === ARSENAL_WOMEN_API_TEAM_ID && arsenalDemo/);
+  assert.match(adapter, /teamId === MANUAL_ARSENAL_TEAM_ID/);
+  assert.match(adapter, /params\?\.teamId === MANUAL_ARSENAL_TEAM_ID/);
+  assert.match(adapter, /MANUAL_ARSENAL_PLAYER_IDS\.has\(playerId\)/);
+  assert.match(manualArsenal, /MANUAL_ARSENAL_TEAM_ID = "140219"/);
+  assert.match(manualArsenal, /source: "manual"/);
+  assert.match(manualArsenal, /teamId: MANUAL_ARSENAL_TEAM_ID/);
   assert.match(mockAdapter, /marketValue: "€735k"/);
   assert.match(mockAdapter, /marketValue: "€800k"/);
   assert.match(mockAdapter, /marketValue: "€1,100k"/);
@@ -110,6 +114,18 @@ test("Arsenal Women demo roster links to three complete player profiles", async 
   assert.ok(existsSync(path.join(root, "public", "images", "flags", "spain.svg")));
 });
 
+test("Arsenal detail data is manual while other teams remain API-backed", async () => {
+  const adapter = await source("lib/wsl-api/adapter.ts");
+  const apiTypes = await source("types/api.ts");
+  const dataState = await source("components/data/data-state.tsx");
+
+  assert.match(apiTypes, /ApiSource = "live" \| "cache" \| "mock" \| "manual"/);
+  assert.match(dataState, /result\.source === "manual"/);
+  assert.match(adapter, /if \(teamId === MANUAL_ARSENAL_TEAM_ID\) return getManualArsenalTeam\(\)/);
+  assert.match(adapter, /if \(params\?\.teamId === MANUAL_ARSENAL_TEAM_ID\) return getManualArsenalFixtures\(params\)/);
+  assert.match(adapter, /if \(MANUAL_ARSENAL_PLAYER_IDS\.has\(playerId\)\) return getManualArsenalPlayer\(playerId\)!/);
+});
+
 test("live WSL API values are localized before reaching the UI", async () => {
   const localization = await source("lib/wsl-api/localization.ts");
   const normalizers = await source("lib/wsl-api/normalizers.ts");
@@ -120,4 +136,11 @@ test("live WSL API values are localized before reaching the UI", async () => {
   for (const helper of ["localizeTeamName", "localizeCountry", "localizeLeagueName", "localizePosition", "localizeEventName", "localizeStatName"]) {
     assert.match(normalizers, new RegExp(helper));
   }
+});
+
+test("live WSL fixture statuses recognize TheSportsDB short status values", async () => {
+  const normalizers = await source("lib/wsl-api/normalizers.ts");
+  assert.match(normalizers, /\["ft", "aet", "pen", "finished", "match finished"\]/);
+  assert.match(normalizers, /\["ns", "not started", "scheduled", "tbd"\]/);
+  assert.match(normalizers, /\["live", "1h", "2h", "ht", "et"\]/);
 });

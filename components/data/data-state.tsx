@@ -6,9 +6,9 @@ type DataSourceNoteProps = {
   result: Pick<ApiResult<unknown>, "source" | "updatedAt" | "isStale">;
 };
 
-// 数据来源提示让用户知道当前内容是真实接口、缓存，还是演示兜底数据。
+// 数据来源提示让用户知道当前内容来自真实接口、缓存、手动资料还是演示兜底数据。
 export function DataSourceNote({ result }: DataSourceNoteProps) {
-  const sourceText = result.source === "live" ? "实时数据" : result.source === "cache" ? "缓存数据" : "演示数据";
+  const sourceText = result.source === "live" ? "实时数据" : result.source === "cache" ? "缓存数据" : result.source === "manual" ? "手动资料" : "演示数据";
   const staleText = result.isStale ? "，可能不是最新" : "";
   return (
     <p className="rounded-md bg-surface px-3 py-2 text-xs font-bold text-muted">

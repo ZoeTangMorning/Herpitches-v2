@@ -42,7 +42,7 @@ const recentPlayerFixtures = [
   },
 ];
 
-const arsenalPlayers: PlayerDetail[] = [
+export const arsenalPlayers: PlayerDetail[] = [
   {
     id: "mock-arsenal-russo",
     name: "Alessia Russo",

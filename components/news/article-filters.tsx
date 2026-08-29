@@ -16,7 +16,7 @@ export function ArticleFilters({ keyword, type }: ArticleFiltersProps) {
   ] as const;
   return (
     <section className="space-y-3 rounded-2xl bg-surface p-3">
-      <form action="/news" className="flex gap-2">
+      <form action="/news" className="flex flex-col gap-2 sm:flex-row">
         <input
           aria-label="搜索新闻"
           className="min-w-0 flex-1 rounded-xl border border-line bg-white px-3 py-2 text-sm text-ink"
@@ -25,7 +25,7 @@ export function ArticleFilters({ keyword, type }: ArticleFiltersProps) {
           placeholder="搜索球队、球员或话题"
         />
         <input name="type" type="hidden" value={type ?? "all"} />
-        <button className="rounded-xl bg-brand px-4 py-2 text-sm font-bold text-white" type="submit">搜索</button>
+        <button className="rounded-xl bg-brand px-4 py-2 text-sm font-bold text-white sm:w-auto" type="submit">搜索</button>
       </form>
       <div className="flex gap-2 overflow-x-auto pb-1">
         {chips.map(([label, value]) => (

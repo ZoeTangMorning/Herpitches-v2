@@ -6,7 +6,12 @@ import { HERPITCHES_COMMUNITY } from "@/components/community/community-storage";
 import { TeamBadge } from "@/components/data/team-badge";
 import { LikeButton } from "@/components/community/like-button";
 import { formatDateTime } from "@/lib/formatters/date";
+import { FallbackImage } from "@/components/ui/fallback-image";
 import type { CommunityMeta, CommunityPostRecord } from "@/types/community";
+
+const MIN_POST_LENGTH = 2;
+const MAX_POST_LENGTH = 500;
+const REQUEST_TIMEOUT_MS = 12000;
 
 type CommunityBoardProps = {
   initialCommunities?: CommunityMeta[];
@@ -66,15 +71,15 @@ export function CommunityBoard({
     setLoading(true);
     setFeedError("");
     try {
-      const response = await fetch(`/api/community/posts?communityId=${encodeURIComponent(communityId)}`);
+      const response = await fetchWithTimeout(`/api/community/posts?communityId=${encodeURIComponent(communityId)}`);
       if (!response.ok) {
         setFeedError("帖子暂时无法读取，请稍后重试。");
         return;
       }
       const payload = await response.json();
       setPostsByCommunity((current) => ({ ...current, [communityId]: payload.data ?? [] }));
-    } catch {
-      setFeedError("帖子暂时无法读取，请稍后重试。");
+    } catch (error) {
+      setFeedError(isAbortError(error) ? "帖子读取超时，请稍后重试。" : "帖子暂时无法读取，请稍后重试。");
     } finally {
       setLoading(false);
     }
@@ -83,10 +88,18 @@ export function CommunityBoard({
   async function submitPost() {
     const content = draft.trim();
     if (!content) return;
+    if (content.length < MIN_POST_LENGTH) {
+      setComposerError("帖子至少需要 2 个字。");
+      return;
+    }
+    if (content.length > MAX_POST_LENGTH) {
+      setComposerError("帖子不能超过 500 个字。");
+      return;
+    }
     setPosting(true);
     setComposerError("");
     try {
-      const response = await fetch("/api/community/posts", {
+      const response = await fetchWithTimeout("/api/community/posts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ communityId: activeCommunity.id, content }),
@@ -104,8 +117,8 @@ export function CommunityBoard({
       setPostsByCommunity((current) => ({ ...current, [activeCommunity.id]: [post, ...(current[activeCommunity.id] ?? [])] }));
       setDraft("");
       setComposerOpen(false);
-    } catch {
-      setComposerError("网络连接失败，请稍后重试。");
+    } catch (error) {
+      setComposerError(isAbortError(error) ? "发布超时，请稍后重试。" : "网络连接失败，请稍后重试。");
     } finally {
       setPosting(false);
     }
@@ -171,7 +184,7 @@ export function CommunityBoard({
 
       <div className="space-y-5 pb-32">
         <div className="flex items-center justify-between gap-3">
-          <h1 className="text-4xl font-black leading-tight text-ink">社区</h1>
+          <h1 className="text-3xl font-black leading-tight text-ink sm:text-4xl">社区</h1>
           <button type="button" onClick={() => setDrawerOpen(true)} className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-line bg-white text-brand shadow-panel">
             <span className="sr-only">打开已关注社区</span>
             <Menu size={22} />
@@ -218,7 +231,7 @@ export function CommunityBoard({
 
       {composerOpen ? (
         <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/35 p-4 md:items-center">
-          <div className="w-full max-w-[520px] rounded-3xl bg-white p-4 shadow-panel">
+          <div className="w-full max-w-[480px] rounded-3xl bg-white p-4 shadow-panel">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-black text-ink">发一条帖子</h3>
               <button type="button" onClick={() => setComposerOpen(false)} className="text-muted">
@@ -229,6 +242,7 @@ export function CommunityBoard({
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
               placeholder="说点什么..."
+              maxLength={MAX_POST_LENGTH}
               className="mt-4 min-h-32 w-full resize-none rounded-2xl border border-line bg-surface px-4 py-3 text-sm leading-6 text-ink outline-none"
             />
             <div className="mt-4 flex items-center justify-end gap-3">
@@ -254,9 +268,7 @@ function ensureHerpitches(communities: CommunityMeta[]) {
 
 function CommunityAvatar({ community, sizeClassName }: { community: CommunityMeta; sizeClassName: string }) {
   if (community.kind === "team") return <TeamBadge label={community.zhName} src={community.badgeUrl ?? `/images/team-badges/${community.id.replace(/^team-/, "")}.png`} className={sizeClassName} />;
-  if (community.avatarUrl) return <img src={community.avatarUrl} alt={community.zhName} className={`rounded-md object-cover ${sizeClassName}`} />;
-  const fallback = community.zhName.trim().slice(0, 2) || "H";
-  return <div className={`flex items-center justify-center rounded-md bg-surface text-sm font-black text-brand ${sizeClassName}`}>{fallback}</div>;
+  return <FallbackImage src={community.avatarUrl} alt={community.zhName} fallbackText={community.zhName} className={`${sizeClassName} rounded-md text-sm font-black text-brand`} />;
 }
 
 function PostCard({ post }: { post: CommunityPostRecord }) {
@@ -276,4 +288,18 @@ function PostCard({ post }: { post: CommunityPostRecord }) {
 
 function EmptyState() {
   return <p className="rounded-2xl border border-dashed border-line bg-surface p-6 text-center text-sm leading-6 text-muted">这里还没有帖子。</p>;
+}
+
+async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
+function isAbortError(error: unknown) {
+  return error instanceof DOMException && error.name === "AbortError";
 }

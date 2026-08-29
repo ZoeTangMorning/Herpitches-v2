@@ -1,14 +1,13 @@
 import { TheSportsDbClient } from "@/lib/wsl-api/client";
 import { DEFAULT_SEASON, WSL_LEAGUE_ID, WSL_LEAGUE_SLUG } from "@/lib/wsl-api/constants";
 import { formatWslApiError, WslApiError } from "@/lib/wsl-api/errors";
+import { getManualArsenalFixtures, getManualArsenalPlayer, getManualArsenalTeam, MANUAL_ARSENAL_PLAYER_IDS, MANUAL_ARSENAL_TEAM_ID } from "@/lib/wsl-api/manual-arsenal";
 import { mockWslApiAdapter } from "@/lib/wsl-api/mock-adapter";
 import { normalizeFixture, normalizeMatchDetail, normalizePlayerDetail, normalizeStandingRow, normalizeTeam, normalizeTeamDetail } from "@/lib/wsl-api/normalizers";
 import type { ApiResult } from "@/types/api";
 import type { Fixture, FixtureQuery, MatchDetail, PlayerDetail, StandingQuery, StandingRow, Team, TeamDetail, TeamQuery } from "@/types/wsl";
 
 type ListResponse<T> = Record<string, T[] | null | undefined>;
-
-const ARSENAL_WOMEN_API_TEAM_ID = "140219";
 
 export interface WslApiAdapter {
   getFixtures(params?: FixtureQuery): Promise<ApiResult<Fixture[]>>;
@@ -39,12 +38,7 @@ class TheSportsDbAdapter implements WslApiAdapter {
     try {
       const response = await this.client.get<ListResponse<Record<string, unknown>>>("search_all_teams.php", { l: WSL_LEAGUE_SLUG });
       const teams = (response.teams ?? []).map(normalizeTeam);
-      if (teams.length) {
-        const mockTeams = await mockWslApiAdapter.getTeams();
-        const arsenalDemo = mockTeams.data.find((team) => team.id === "mock-arsenal-women");
-        const navigationTeams = teams.map((team) => team.id === ARSENAL_WOMEN_API_TEAM_ID && arsenalDemo ? arsenalDemo : team);
-        return liveResult(navigationTeams);
-      }
+      if (teams.length) return liveResult(teams);
       return fallbackResult(await mockWslApiAdapter.getTeams(), emptyResultError("球队列表"));
     } catch (error) {
       return fallbackResult(await mockWslApiAdapter.getTeams(), error);
@@ -52,6 +46,8 @@ class TheSportsDbAdapter implements WslApiAdapter {
   }
 
   async getTeam(teamId: string) {
+    if (teamId === MANUAL_ARSENAL_TEAM_ID) return getManualArsenalTeam();
+
     try {
       const teamResponse = await this.client.get<ListResponse<Record<string, unknown>>>("lookupteam.php", { id: teamId });
       const team = teamResponse.teams?.[0];
@@ -86,6 +82,7 @@ class TheSportsDbAdapter implements WslApiAdapter {
   }
 
   async getPlayer(playerId: string) {
+    if (MANUAL_ARSENAL_PLAYER_IDS.has(playerId)) return getManualArsenalPlayer(playerId)!;
     if (playerId.startsWith("mock-")) {
       return mockWslApiAdapter.getPlayer(playerId);
     }
@@ -103,6 +100,8 @@ class TheSportsDbAdapter implements WslApiAdapter {
   }
 
   async getFixtures(params?: FixtureQuery) {
+    if (params?.teamId === MANUAL_ARSENAL_TEAM_ID) return getManualArsenalFixtures(params);
+
     try {
       const season = params?.season ?? DEFAULT_SEASON;
       const response = await this.client.get<ListResponse<Record<string, unknown>>>("eventsseason.php", { id: WSL_LEAGUE_ID, s: season });

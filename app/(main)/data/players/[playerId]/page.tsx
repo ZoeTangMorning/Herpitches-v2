@@ -24,21 +24,20 @@ export default async function PlayerPage({ params }: PlayerPageProps) {
   const recentFixtures = player.recentFixtures ?? [];
 
   return (
-    <article className="-mx-4 bg-white">
-      <header className="px-5 pb-8 pt-2">
-        <div className="text-center">
-          <PlayerAvatar label={player.name} src={player.avatarUrl} className="mx-auto h-32 w-32 rounded-full text-2xl shadow-panel" />
-          <h1 className="mt-5 text-2xl font-black text-ink">
-            {player.originalName}{player.shirtNumber !== undefined ? ` | ${player.shirtNumber}号` : ""}
-          </h1>
-          {player.chineseName ? <p className="mt-2 text-base font-bold text-ink">{player.chineseName}</p> : null}
-          <p className="mt-2 text-sm text-muted">
-            <NationalityFlag nationality={player.nationality} />{" "}
-            {formatNullableText(player.nationality)}
-          </p>
-        </div>
+    <article className="space-y-6">
+      <header className="rounded-2xl border border-line bg-white p-5 text-center shadow-panel">
+        <PlayerAvatar label={player.name} src={player.avatarUrl} className="mx-auto h-28 w-28 rounded-full text-xl shadow-panel" />
+        <h1 className="mt-5 break-words text-2xl font-black text-ink">
+          {player.originalName}
+          {player.shirtNumber !== undefined ? ` | ${player.shirtNumber}号` : ""}
+        </h1>
+        {player.chineseName ? <p className="mt-2 text-base font-bold text-ink">{player.chineseName}</p> : null}
+        <p className="mt-2 text-sm text-muted">
+          <NationalityFlag nationality={player.nationality} />{" "}
+          {formatNullableText(player.nationality)}
+        </p>
 
-        <dl className="mt-8 grid grid-cols-4 gap-1 text-center">
+        <dl className="mt-6 grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
           <PlayerFact label="俱乐部" value={player.teamName} />
           <PlayerFact label="位置" value={player.position} />
           <PlayerFact label="身价" value={player.marketValue} />
@@ -46,43 +45,49 @@ export default async function PlayerPage({ params }: PlayerPageProps) {
         </dl>
       </header>
 
-      <section className="border-t border-line px-5 py-8">
-        <h2 className="text-xl font-black text-ink">转会记录</h2>
+      <section className="rounded-2xl border border-line bg-white p-5 shadow-panel">
+        <h2 className="text-lg font-black text-ink">转会记录</h2>
         {transfers.length ? (
-          <ol className="mt-6">
+          <ol className="mt-5">
             {transfers.map((transfer, index) => (
               <li key={`${transfer.clubName}-${transfer.from}`} className="relative pb-6 pl-7 last:pb-0">
                 {index < transfers.length - 1 ? <span className="absolute left-[5px] top-3 h-full w-px bg-line" aria-hidden="true" /> : null}
                 <span className="absolute left-0 top-1.5 h-3 w-3 rounded-full bg-brand ring-4 ring-white" aria-hidden="true" />
                 <p className="font-black text-ink">{transfer.clubName}</p>
-                <p className="mt-1 text-sm text-muted">{transfer.from} – {transfer.to}</p>
+                <p className="mt-1 text-sm text-muted">
+                  {transfer.from} – {transfer.to}
+                </p>
               </li>
             ))}
           </ol>
-        ) : <p className="mt-4 text-sm text-muted">暂未提供转会记录。</p>}
+        ) : (
+          <p className="mt-4 text-sm text-muted">暂未提供转会记录。</p>
+        )}
       </section>
 
-      <section className="border-t border-line px-5 py-8">
-        <h2 className="text-xl font-black text-ink">近期比赛</h2>
+      <section className="rounded-2xl border border-line bg-white p-5 shadow-panel">
+        <h2 className="text-lg font-black text-ink">近期比赛</h2>
         {recentFixtures.length ? (
           <div className="mt-2 divide-y divide-line">
             {recentFixtures.map((fixture) => <RecentPlayerFixture key={fixture.id} fixture={fixture} />)}
           </div>
-        ) : <p className="mt-4 text-sm text-muted">暂未提供近期比赛。</p>}
+        ) : (
+          <p className="mt-4 text-sm text-muted">暂未提供近期比赛。</p>
+        )}
       </section>
 
-      <section className="border-t border-line px-5 py-8">
-        <h2 className="text-xl font-black text-ink">球员简介</h2>
+      <section className="rounded-2xl border border-line bg-white p-5 shadow-panel">
+        <h2 className="text-lg font-black text-ink">球员简介</h2>
         <p className="mt-5 whitespace-pre-line text-sm leading-7 text-muted">{formatNullableText(player.description)}</p>
       </section>
 
-      <section className="border-y border-line px-5 py-8">
+      <section className="rounded-2xl border border-line bg-white p-5 shadow-panel">
         <div className="flex items-center justify-between gap-4">
-          <h2 className="text-xl font-black text-ink">赛季基础数据</h2>
+          <h2 className="text-lg font-black text-ink">赛季基础数据</h2>
           <span className="shrink-0 text-sm font-bold text-muted">{player.statsSeason ?? "2025/26"} ▼</span>
         </div>
         {stats ? (
-          <dl className="mt-7 grid grid-cols-4 gap-2 text-center">
+          <dl className="mt-6 grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
             {Object.entries({ 出场: stats.appearances, 首发: stats.starts, 进球: stats.goals, 助攻: stats.assists }).map(([label, value]) => (
               <div key={label} className="min-w-0">
                 <dd className="text-2xl font-black text-brand">{formatNumber(value)}</dd>
@@ -90,7 +95,11 @@ export default async function PlayerPage({ params }: PlayerPageProps) {
               </div>
             ))}
           </dl>
-        ) : <div className="mt-5"><EmptyState title="暂无赛季数据" description="当前数据源没有提供这名球员的统计信息。" /></div>}
+        ) : (
+          <div className="mt-5">
+            <EmptyState title="暂无赛季数据" description="当前数据源没有提供这名球员的统计信息。" />
+          </div>
+        )}
       </section>
     </article>
   );

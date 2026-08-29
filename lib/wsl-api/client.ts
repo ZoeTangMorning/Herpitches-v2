@@ -3,9 +3,28 @@ import { WslApiError } from "@/lib/wsl-api/errors";
 
 type QueryValue = string | number | undefined;
 
+export function resolveSportsDbBaseUrl(value = process.env.WSL_API_BASE_URL) {
+  return (value?.trim() || DEFAULT_SPORTSDB_BASE_URL).replace(/\/+$/, "");
+}
+
+export function buildSportsDbUrl(
+  baseUrl: string,
+  apiKey: string,
+  endpoint: string,
+  params: Record<string, QueryValue> = {},
+) {
+  const url = new URL(`${resolveSportsDbBaseUrl(baseUrl)}/${apiKey}/${endpoint.replace(/^\/+/, "")}`);
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== "") {
+      url.searchParams.set(key, String(value));
+    }
+  });
+  return url;
+}
+
 // client 只负责和 TheSportsDB 说话，不把供应商字段解释成业务含义。
 export class TheSportsDbClient {
-  private readonly baseUrl = (process.env.WSL_API_BASE_URL ?? DEFAULT_SPORTSDB_BASE_URL).replace(/\/$/, "");
+  private readonly baseUrl = resolveSportsDbBaseUrl();
   private readonly apiKey = process.env.WSL_API_KEY || DEFAULT_SPORTSDB_KEY;
   private readonly timeoutMs = Number(process.env.WSL_API_TIMEOUT_MS ?? DEFAULT_TIMEOUT_MS);
 
@@ -27,12 +46,6 @@ export class TheSportsDbClient {
   }
 
   private buildUrl(endpoint: string, params: Record<string, QueryValue>) {
-    const url = new URL(`${this.baseUrl}/${this.apiKey}/${endpoint}`);
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== "") {
-        url.searchParams.set(key, String(value));
-      }
-    });
-    return url;
+    return buildSportsDbUrl(this.baseUrl, this.apiKey, endpoint, params);
   }
 }

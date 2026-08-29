@@ -2,11 +2,15 @@ import { createServerClient, type SetAllCookies } from "@supabase/ssr";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getSupabaseConfig, isSupabaseConfigured } from "@/lib/supabase/config";
+import { hasSupabaseSessionCookie } from "@/lib/supabase/session";
 
 // Middleware 的职责是把刷新后的 Supabase cookie 写回响应，页面本身无需感知刷新过程。
 export async function updateSession(request: NextRequest) {
   if (!isSupabaseConfigured()) {
     return NextResponse.next();
+  }
+  if (!hasSupabaseSessionCookie(request.cookies)) {
+    return NextResponse.next({ request });
   }
 
   let response = NextResponse.next({ request });

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { FallbackImage } from "@/components/ui/fallback-image";
 import type { FavoriteRecord } from "@/types/user";
 
 type FavoriteListProps = {
@@ -24,8 +25,17 @@ export function FavoriteList({ records }: FavoriteListProps) {
     <div className="space-y-3">
       {items.map((item) => (
         <article key={item.id} className="flex items-center gap-3 rounded-2xl border border-line bg-white p-3 shadow-panel">
-          <div className="h-16 w-20 shrink-0 overflow-hidden rounded-xl bg-surface">{item.articleCoverUrl ? <img src={item.articleCoverUrl} alt="" className="h-full w-full object-cover" /> : null}</div>
-          <div className="min-w-0 flex-1"><Link href={`/news/${item.articleId}`} className="block break-words text-sm font-bold leading-6 text-ink hover:text-brand">{item.articleTitle}</Link><p className="mt-1 text-xs text-muted">{item.articleType ?? "新闻"}</p></div>
+          <FallbackImage
+            src={item.articleCoverUrl}
+            alt={item.articleTitle}
+            fallbackText="暂无图片"
+            compactFallback={false}
+            className="h-16 w-20 shrink-0 rounded-xl text-[10px] font-bold !text-muted"
+          />
+          <div className="min-w-0 flex-1">
+            <Link href={`/news/${item.articleId}`} className="block break-words text-sm font-bold leading-6 text-ink hover:text-brand">{item.articleTitle}</Link>
+            <p className="mt-1 text-xs text-muted">{item.articleType ?? "新闻"}</p>
+          </div>
           <button type="button" onClick={() => remove(item.id)} className="shrink-0 text-xs font-bold text-muted hover:text-red-700">取消</button>
         </article>
       ))}

@@ -8,7 +8,7 @@
     "start": "node scripts/next-dist.mjs start .next-build",
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
-    "test": "node --test tests/unit/second-version-regression.test.mjs tests/e2e/second-version-pages.test.mjs"
+    "test": "node --test tests/unit/second-version-regression.test.mjs tests/unit/pwa.test.mjs tests/unit/wsl-client.test.mjs tests/e2e/second-version-pages.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",

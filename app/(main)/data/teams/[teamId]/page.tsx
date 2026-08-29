@@ -32,7 +32,7 @@ export default async function TeamPage({ params }: TeamPageProps) {
         <div className="mt-5 flex items-start gap-4">
           <TeamBadge label={team.data.name} src={team.data.badgeUrl ? team.data.badgeUrl : `/images/team-badges/${team.data.id}.png`} className="h-16 w-16" />
           <div className="min-w-0 flex-1">
-            <h1 className="break-words text-3xl font-black text-ink">{team.data.name}</h1>
+            <h1 className="break-words text-2xl font-black text-ink sm:text-3xl">{team.data.name}</h1>
             <p className="mt-1 text-sm text-muted">{team.data.leagueName}</p>
             <div className="mt-3">
               <FollowButton targetType="team" targetId={team.data.id} targetName={team.data.name} targetAvatarUrl={team.data.badgeUrl ?? `/images/team-badges/${team.data.id}.png`} />
@@ -42,22 +42,22 @@ export default async function TeamPage({ params }: TeamPageProps) {
       </header>
       <DataSourceNote result={team} />
       {team.error ? <ErrorPanel message={team.error} /> : null}
-      <section className="rounded-md border border-line bg-white p-5 shadow-panel">
-        <h2 className="text-xl font-black text-ink">球队资料</h2>
+      <section className="rounded-2xl border border-line bg-white p-5 shadow-panel">
+        <h2 className="text-lg font-black text-ink">球队资料</h2>
         <p className="mt-4 text-sm leading-7 text-muted">{formatNullableText(team.data.description)}</p>
         <p className="mt-3 text-sm text-muted">主场：{formatNullableText(team.data.stadium)} · 成立：{formatNullableText(team.data.formedYear)}</p>
       </section>
       <section>
-        <h2 className="mb-4 text-xl font-black text-ink">球员名单</h2>
+        <h2 className="mb-4 text-lg font-black text-ink">球员名单</h2>
         {team.data.players.length ? <div className="grid gap-4">{team.data.players.map((player) => <PlayerCard key={player.id} player={player} />)}</div> : <EmptyState title="暂无球员名单" description="该球队目前没有可展示的球员资料。" />}
       </section>
       <section>
-        <h2 className="mb-4 text-xl font-black text-ink">近期赛程</h2>
+        <h2 className="mb-4 text-lg font-black text-ink">近期赛程</h2>
         {fixtures.data.length ? <div className="grid gap-4">{fixtures.data.slice(0, 6).map((fixture) => <FixtureCard key={fixture.id} fixture={fixture} />)}</div> : <EmptyState title="暂无赛程" description="该球队目前没有可展示的比赛。" />}
       </section>
       <section className="space-y-4">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-xl font-black text-ink">主队相关新闻</h2>
+          <h2 className="text-lg font-black text-ink">主队相关新闻</h2>
           <p className="text-xs font-bold text-muted">{relatedArticles.length} 篇</p>
         </div>
         <div className="space-y-3">
