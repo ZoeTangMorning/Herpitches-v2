@@ -1,0 +1,16 @@
+# Next.js 生成的构建产物和类型缓存。
+.next/
+.next-dev/
+.next-build/
+out/
+node_modules/
+
+# 本地环境变量可能包含密钥，不能提交到代码仓库。
+.env
+.env.local
+.env.*.local
+
+# 常见开发工具生成的临时文件。
+*.log
+coverage/
+.DS_Store
