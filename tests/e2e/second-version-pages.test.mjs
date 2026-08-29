@@ -63,4 +63,61 @@ test("recent fixtures render square team badges from the teamId image folder", a
   assert.match(teamBadge, /role="img"/);
   assert.match(teamBadge, /opacity-0/);
   assert.ok(existsSync(badgeDir));
+  for (const teamId of ["140218", "140219", "140220", "140221", "140222", "140224", "140225", "140226", "140228", "140229", "140399", "140532", "140537", "140539", "140540"]) {
+    assert.ok(existsSync(path.join(root, "public", "images", "team-badges", `${teamId}.png`)));
+  }
+});
+
+test("Arsenal Women demo roster links to three complete player profiles", async () => {
+  const adapter = await source("lib/wsl-api/adapter.ts");
+  const mockAdapter = await source("lib/wsl-api/mock-adapter.ts");
+  const playerPage = await source("app/(main)/data/players/[playerId]/page.tsx");
+  const playerAvatar = await source("components/data/player-avatar.tsx");
+  const playerDir = path.join(root, "public", "images", "players");
+
+  for (const playerId of ["mock-arsenal-russo", "mock-arsenal-williamson", "mock-arsenal-caldentey"]) {
+    assert.match(mockAdapter, new RegExp(`id: "${playerId}"`));
+  }
+  assert.match(adapter, /playerId\.startsWith\("mock-"\)/);
+  assert.match(adapter, /ARSENAL_WOMEN_API_TEAM_ID = "140219"/);
+  assert.match(adapter, /team\.id === ARSENAL_WOMEN_API_TEAM_ID && arsenalDemo/);
+  assert.match(mockAdapter, /marketValue: "€735k"/);
+  assert.match(mockAdapter, /marketValue: "€800k"/);
+  assert.match(mockAdapter, /marketValue: "€1,100k"/);
+  assert.match(mockAdapter, /stats: \{ appearances: 28, starts: 22, goals: 13, assists: 6 \}/);
+  assert.match(mockAdapter, /stats: \{ appearances: 6, starts: 2, goals: 1, assists: 0 \}/);
+  assert.match(mockAdapter, /stats: \{ appearances: 22, starts: 20, goals: 4, assists: 4 \}/);
+  assert.match(mockAdapter, /英格兰前锋阿莱西娅在2024\/25赛季/);
+  assert.match(mockAdapter, /这名身材高挑、气质优雅的后卫/);
+  assert.match(mockAdapter, /西班牙国脚中场马里奥娜·卡尔登泰/);
+
+  for (const section of ["转会记录", "近期比赛", "球员简介", "赛季基础数据"]) {
+    assert.match(playerPage, new RegExp(section));
+  }
+  assert.match(playerPage, /<PlayerAvatar/);
+  assert.match(playerPage, /<TeamBadge/);
+  assert.match(playerPage, /aria-label="英格兰旗"/);
+  assert.match(playerPage, /fill="#CE1124"/);
+  assert.match(playerPage, /src="\/images\/flags\/spain\.svg"/);
+  assert.match(playerPage, /alt="西班牙旗"/);
+  assert.match(playerPage, /whitespace-pre-line/);
+  assert.doesNotMatch(playerPage, /FollowButton|DataSourceNote|stats\.minutes/);
+  assert.match(playerAvatar, /onError=\{\(\) => setBroken\(true\)\}/);
+
+  for (const image of ["alessia-russo.webp", "leah-williamson.webp", "mariona-caldentey.webp"]) {
+    assert.ok(existsSync(path.join(playerDir, image)));
+  }
+  assert.ok(existsSync(path.join(root, "public", "images", "flags", "spain.svg")));
+});
+
+test("live WSL API values are localized before reaching the UI", async () => {
+  const localization = await source("lib/wsl-api/localization.ts");
+  const normalizers = await source("lib/wsl-api/normalizers.ts");
+
+  for (const text of ["阿斯顿维拉女足", "布莱顿女足", "切尔西女足", "曼城女足", "曼联女足", "托特纳姆热刺女足", "英格兰女足超级联赛", "中后卫", "控球率"]) {
+    assert.match(localization, new RegExp(text));
+  }
+  for (const helper of ["localizeTeamName", "localizeCountry", "localizeLeagueName", "localizePosition", "localizeEventName", "localizeStatName"]) {
+    assert.match(normalizers, new RegExp(helper));
+  }
 });
