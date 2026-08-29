@@ -3,7 +3,7 @@ import type { LikeTargetType, ReportInput, ReportReason } from "@/types/communit
 type LikeInput = { targetType: LikeTargetType; targetId: string };
 type Parsed<T> = { ok: true; value: T } | { ok: false; message: string };
 
-const likeTargets: LikeTargetType[] = ["article", "comment"];
+const likeTargets: LikeTargetType[] = ["article", "comment", "post"];
 const reportReasons: ReportReason[] = ["spam", "abuse", "misinformation", "other"];
 
 // 点赞只需要目标类型和目标 ID，用户身份由服务端 Cookie 判断。

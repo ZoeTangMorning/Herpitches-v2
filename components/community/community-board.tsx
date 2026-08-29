@@ -2,65 +2,36 @@
 
 import { Menu, Plus, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  addCommunityPost,
-  createCommunityFromFollow,
-  createInitialCommunityState,
-  HERPITCHES_COMMUNITY,
-  readCommunityState,
-  type CommunityMeta,
-  type CommunityPost,
-  type CommunityState,
-  upsertCommunity,
-  writeCommunityState,
-} from "@/components/community/community-storage";
+import { HERPITCHES_COMMUNITY } from "@/components/community/community-storage";
 import { TeamBadge } from "@/components/data/team-badge";
+import { LikeButton } from "@/components/community/like-button";
+import { formatDateTime } from "@/lib/formatters/date";
+import type { CommunityMeta, CommunityPostRecord } from "@/types/community";
 
 type CommunityBoardProps = {
   initialCommunities?: CommunityMeta[];
-  initialPosts?: CommunityPost[];
+  initialPosts?: CommunityPostRecord[];
   isLoggedIn?: boolean;
 };
 
 export function CommunityBoard({
   initialCommunities = [HERPITCHES_COMMUNITY],
-  initialPosts = createInitialCommunityState().posts,
+  initialPosts = [],
   isLoggedIn = false,
 }: CommunityBoardProps) {
-  const [state, setState] = useState<CommunityState>(() => createSeedState(initialCommunities, initialPosts));
+  const communities = useMemo(() => ensureHerpitches(initialCommunities), [initialCommunities]);
+  const [activeCommunityId, setActiveCommunityId] = useState(HERPITCHES_COMMUNITY.id);
+  const [postsByCommunity, setPostsByCommunity] = useState<Record<string, CommunityPostRecord[]>>(() => ({
+    [HERPITCHES_COMMUNITY.id]: initialPosts,
+  }));
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [composerOpen, setComposerOpen] = useState(false);
   const [draft, setDraft] = useState("");
-  const [hydrated, setHydrated] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [feedError, setFeedError] = useState("");
+  const [composerError, setComposerError] = useState("");
+  const [posting, setPosting] = useState(false);
   const touchStartX = useRef<number | null>(null);
-
-  useEffect(() => {
-    const stored = readCommunityState();
-    setState((current) => mergeState(current, stored, initialCommunities));
-    setHydrated(true);
-  }, [initialCommunities]);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    writeCommunityState(state);
-  }, [hydrated, state]);
-
-  useEffect(() => {
-    function handleFollow(event: Event) {
-      const detail = (event as CustomEvent<{ targetType?: string; targetId?: string; targetName?: string; targetAvatarUrl?: string }>).detail;
-      if (!detail?.targetType || detail.targetType === "match" || !detail.targetId || !detail.targetName) return;
-      const community = createCommunityFromFollow({
-        targetType: detail.targetType as "team" | "player",
-        targetId: detail.targetId,
-        targetName: detail.targetName,
-        targetAvatarUrl: detail.targetAvatarUrl,
-      });
-      setState((current) => upsertCommunity(current, community));
-    }
-
-    window.addEventListener("herpitches-follow", handleFollow);
-    return () => window.removeEventListener("herpitches-follow", handleFollow);
-  }, []);
 
   useEffect(() => {
     const keyHandler = (event: KeyboardEvent) => {
@@ -73,27 +44,71 @@ export function CommunityBoard({
     return () => window.removeEventListener("keydown", keyHandler);
   }, []);
 
-  const activeCommunity = useMemo(() => state.communities.find((item) => item.id === state.activeCommunityId) ?? HERPITCHES_COMMUNITY, [state.activeCommunityId, state.communities]);
-  const activePosts = useMemo(() => state.posts.filter((post) => post.communityId === activeCommunity.id), [activeCommunity.id, state.posts]);
+  const activeCommunity = useMemo(() => communities.find((item) => item.id === activeCommunityId) ?? HERPITCHES_COMMUNITY, [activeCommunityId, communities]);
+  const activePosts = postsByCommunity[activeCommunity.id] ?? [];
 
   function selectCommunity(id: string) {
-    setState((current) => ({ ...current, activeCommunityId: id }));
+    setActiveCommunityId(id);
     setDrawerOpen(false);
+    if (!postsByCommunity[id]) void loadPosts(id);
   }
 
-  function submitPost() {
+  function openComposer() {
+    if (!isLoggedIn) {
+      window.location.href = `/auth/login?next=${encodeURIComponent("/community")}`;
+      return;
+    }
+    setComposerError("");
+    setComposerOpen(true);
+  }
+
+  async function loadPosts(communityId: string) {
+    setLoading(true);
+    setFeedError("");
+    try {
+      const response = await fetch(`/api/community/posts?communityId=${encodeURIComponent(communityId)}`);
+      if (!response.ok) {
+        setFeedError("帖子暂时无法读取，请稍后重试。");
+        return;
+      }
+      const payload = await response.json();
+      setPostsByCommunity((current) => ({ ...current, [communityId]: payload.data ?? [] }));
+    } catch {
+      setFeedError("帖子暂时无法读取，请稍后重试。");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function submitPost() {
     const content = draft.trim();
     if (!content) return;
-    const post: CommunityPost = {
-      id: `post-${Date.now()}`,
-      communityId: activeCommunity.id,
-      authorName: "我",
-      content,
-      createdAt: new Date().toISOString(),
-    };
-    setState((current) => addCommunityPost(current, post));
-    setDraft("");
-    setComposerOpen(false);
+    setPosting(true);
+    setComposerError("");
+    try {
+      const response = await fetch("/api/community/posts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ communityId: activeCommunity.id, content }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (response.status === 401) {
+        window.location.href = `/auth/login?next=${encodeURIComponent("/community")}`;
+        return;
+      }
+      if (!response.ok || !payload.data) {
+        setComposerError(payload.message ?? "发布失败，请稍后重试。");
+        return;
+      }
+      const post = payload.data as CommunityPostRecord;
+      setPostsByCommunity((current) => ({ ...current, [activeCommunity.id]: [post, ...(current[activeCommunity.id] ?? [])] }));
+      setDraft("");
+      setComposerOpen(false);
+    } catch {
+      setComposerError("网络连接失败，请稍后重试。");
+    } finally {
+      setPosting(false);
+    }
   }
 
   function handleTouchStart(event: React.TouchEvent) {
@@ -131,7 +146,7 @@ export function CommunityBoard({
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3">
             <div className="space-y-2">
-              {state.communities.map((community) => (
+              {communities.map((community) => (
                 <button
                   key={community.id}
                   type="button"
@@ -179,14 +194,22 @@ export function CommunityBoard({
             <p className="text-xs font-bold text-muted">{activePosts.length} 条</p>
           </div>
           <div className="space-y-3">
-            {activePosts.length ? activePosts.map((post) => <PostCard key={post.id} post={post} />) : <EmptyState />}
+            {loading ? (
+              <p className="rounded-2xl bg-surface p-6 text-center text-sm leading-6 text-muted">帖子加载中...</p>
+            ) : feedError ? (
+              <p className="rounded-2xl bg-surface p-6 text-center text-sm leading-6 text-red-700">{feedError}</p>
+            ) : activePosts.length ? (
+              activePosts.map((post) => <PostCard key={post.id} post={post} />)
+            ) : (
+              <EmptyState />
+            )}
           </div>
         </section>
       </div>
 
       <button
         type="button"
-        onClick={() => setComposerOpen(true)}
+        onClick={openComposer}
         className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] left-1/2 z-20 inline-flex h-14 w-14 -translate-x-1/2 items-center justify-center rounded-full bg-[#8a4ca5] text-white shadow-[0_16px_32px_rgba(138,76,165,0.35)] transition-transform hover:scale-105 md:bottom-20"
       >
         <span className="sr-only">发布帖子</span>
@@ -212,10 +235,11 @@ export function CommunityBoard({
               <button type="button" onClick={() => setComposerOpen(false)} className="rounded-xl border border-line px-4 py-2 text-sm font-bold text-muted">
                 取消
               </button>
-              <button type="button" onClick={submitPost} className="rounded-xl bg-brand px-4 py-2 text-sm font-bold text-white disabled:opacity-50" disabled={!draft.trim()}>
-                发布
+              <button type="button" onClick={submitPost} className="rounded-xl bg-brand px-4 py-2 text-sm font-bold text-white disabled:opacity-50" disabled={posting || !draft.trim()}>
+                {posting ? "发布中..." : "发布"}
               </button>
             </div>
+            {composerError ? <p role="alert" className="mt-3 text-sm text-red-700">{composerError}</p> : null}
           </div>
         </div>
       ) : null}
@@ -223,21 +247,9 @@ export function CommunityBoard({
   );
 }
 
-function createSeedState(communities: CommunityMeta[], posts: CommunityPost[]): CommunityState {
-  const seed = createInitialCommunityState();
-  const state = communities.reduce((current, community) => upsertCommunity(current, community), seed);
-  return { ...state, activeCommunityId: HERPITCHES_COMMUNITY.id, posts: posts.length ? posts : seed.posts };
-}
-
-function mergeState(current: CommunityState, stored: CommunityState, requiredCommunities: CommunityMeta[]) {
-  const withStored = stored.communities.reduce((next, community) => upsertCommunity(next, community), current);
-  const withRequired = requiredCommunities.reduce((next, community) => upsertCommunity(next, community), withStored);
-  const activeCommunityId = withRequired.communities.some((item) => item.id === stored.activeCommunityId) ? stored.activeCommunityId : HERPITCHES_COMMUNITY.id;
-  return {
-    ...withRequired,
-    activeCommunityId,
-    posts: stored.posts.length ? stored.posts : current.posts,
-  };
+function ensureHerpitches(communities: CommunityMeta[]) {
+  const items = communities.length ? communities : [HERPITCHES_COMMUNITY];
+  return items.some((item) => item.id === HERPITCHES_COMMUNITY.id) ? items : [HERPITCHES_COMMUNITY, ...items];
 }
 
 function CommunityAvatar({ community, sizeClassName }: { community: CommunityMeta; sizeClassName: string }) {
@@ -247,14 +259,17 @@ function CommunityAvatar({ community, sizeClassName }: { community: CommunityMet
   return <div className={`flex items-center justify-center rounded-md bg-surface text-sm font-black text-brand ${sizeClassName}`}>{fallback}</div>;
 }
 
-function PostCard({ post }: { post: CommunityPost }) {
+function PostCard({ post }: { post: CommunityPostRecord }) {
   return (
     <article className="rounded-2xl border border-line bg-white p-4 shadow-panel">
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm font-black text-ink">{post.authorName}</p>
-        <p className="text-xs text-muted">{new Date(post.createdAt).toLocaleString("zh-CN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
+        <p className="text-xs text-muted">{formatDateTime(post.createdAt)}</p>
       </div>
       <p className="mt-3 text-sm leading-6 text-ink">{post.content}</p>
+      <div className="mt-3 flex justify-end">
+        <LikeButton targetType="post" targetId={post.id} initialCount={post.likeCount} initiallyLiked={post.likedByMe} compact />
+      </div>
     </article>
   );
 }

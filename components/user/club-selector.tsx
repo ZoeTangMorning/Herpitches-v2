@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { createCommunityFromFollow, readCommunityState, upsertCommunity, writeCommunityState } from "@/components/community/community-storage";
 import { TeamBadge } from "@/components/data/team-badge";
 import type { Team } from "@/types/wsl";
 
@@ -28,19 +27,6 @@ export function ClubSelector({ teams, returnTo }: ClubSelectorProps) {
       setSaving(null);
       setError("主队保存失败，请稍后重试。");
       return;
-    }
-    if (team) {
-      const state = readCommunityState();
-      const next = upsertCommunity(
-        state,
-        createCommunityFromFollow({
-          targetType: "team",
-          targetId: team.id,
-          targetName: team.name,
-          targetAvatarUrl: team.badgeUrl ?? `/images/team-badges/${team.id}.png`,
-        }),
-      );
-      writeCommunityState(next);
     }
     window.location.href = returnTo;
   }
