@@ -24,6 +24,7 @@ export default async function MePage() {
           <MenuLink href="/me/favorites" label="我的收藏" />
           <MenuLink href="/me/notifications" label="提醒设置" />
           <MenuLink href="/me/comments" label="我的评论" />
+          <MenuLink href="/me/posts" label="我的帖子" />
         </div>
         <LogoutButton />
     </section>

@@ -18,13 +18,46 @@ export type CommentRecord = {
 };
 
 // 文章和评论都可以点赞，所以目标类型必须明确区分。
-export type LikeTargetType = "article" | "comment";
+export type LikeTargetType = "article" | "comment" | "post";
 
 export type LikeState = {
   targetType: LikeTargetType;
   targetId: string;
   likeCount: number;
   likedByMe: boolean;
+};
+
+export type CommunityKind = "official" | "team" | "player";
+
+export type CommunityMeta = {
+  id: string;
+  kind: CommunityKind;
+  zhName: string;
+  enName: string;
+  avatarUrl?: string;
+  badgeUrl?: string;
+};
+
+export type CommunityPostStatus = "approved" | "deleted";
+
+export type CommunityPostRecord = {
+  id: string;
+  communityId: string;
+  communityKind: CommunityKind;
+  communityName?: string;
+  authorName: string;
+  content: string;
+  status: CommunityPostStatus;
+  isOwn: boolean;
+  likeCount: number;
+  likedByMe: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PostInput = {
+  communityId: string;
+  content: string;
 };
 
 // 举报原因使用固定枚举，方便后续人工审核时分类查看。

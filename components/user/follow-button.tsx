@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { createCommunityFromFollow, readCommunityState, upsertCommunity, writeCommunityState } from "@/components/community/community-storage";
 import type { FollowTargetType } from "@/types/user";
 
 type FollowButtonProps = {
@@ -12,7 +11,7 @@ type FollowButtonProps = {
 };
 
 // 关注按钮只提交对象的最小标识，服务端仍会再次验证登录身份。
-export function FollowButton({ targetType, targetId, targetName, targetAvatarUrl }: FollowButtonProps) {
+export function FollowButton({ targetType, targetId, targetName }: FollowButtonProps) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -27,19 +26,6 @@ export function FollowButton({ targetType, targetId, targetName, targetAvatarUrl
     setBusy(false);
     if (response.ok) {
       setMessage("已关注");
-      if (targetType === "team" || targetType === "player") {
-        const state = readCommunityState();
-        const next = upsertCommunity(
-          state,
-          createCommunityFromFollow({ targetType, targetId, targetName, targetAvatarUrl }),
-        );
-        writeCommunityState(next);
-        window.dispatchEvent(
-          new CustomEvent("herpitches-follow", {
-            detail: { targetType, targetId, targetName, targetAvatarUrl },
-          }),
-        );
-      }
     } else {
       setMessage(response.status === 401 ? "请先登录" : "关注失败");
     }

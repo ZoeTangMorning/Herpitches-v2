@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">HerPitches logo</title>
+  <desc id="desc">A two-line purple serif wordmark reading Her and Pitches on a white square background.</desc>
+  <rect width="1024" height="1024" fill="#ffffff"/>
+  <g fill="#64077e" text-anchor="start" font-family="Didot, 'Bodoni 72', 'Baskerville', 'Times New Roman', serif">
+    <text x="224" y="454" font-size="270" font-weight="400" letter-spacing="6">Her</text>
+    <text x="224" y="700" font-size="190" font-weight="600" letter-spacing="3">Pitches</text>
+  </g>
+</svg>

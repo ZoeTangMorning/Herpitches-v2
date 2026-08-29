@@ -23,29 +23,46 @@ test("WSL adapter retries missing team players and exposes the failure reason", 
   assert.match(errors, /formatWslApiError/);
 });
 
-test("community demo state keeps herpitches as the default and persists locally", async () => {
-  const storage = await source("components/community/community-storage.ts");
+test("community uses server-backed posts and keeps herpitches as the default", async () => {
+  const communityPage = await source("app/(main)/community/page.tsx");
   const board = await source("components/community/community-board.tsx");
+  const postsApi = await source("app/api/community/posts/route.ts");
+  const migration = await source("supabase/migrations/007_community_posts.sql");
 
-  assert.match(storage, /COMMUNITY_STORAGE_KEY = "herpitches\.community\.demo\.v1"/);
-  assert.match(storage, /id: "herpitches"/);
-  assert.match(storage, /window\.localStorage\.getItem/);
-  assert.match(storage, /window\.localStorage\.setItem/);
-  assert.match(storage, /function normalizeCommunities/);
-  assert.match(board, /activeCommunityId: HERPITCHES_COMMUNITY\.id/);
-  assert.match(board, /writeCommunityState\(state\)/);
+  assert.match(communityPage, /getCommunityPosts\(context, HERPITCHES_COMMUNITY\.id\)/);
+  assert.match(board, /fetch\(`\/api\/community\/posts\?communityId=/);
+  assert.match(board, /targetType="post"/);
+  assert.match(postsApi, /export async function POST/);
+  assert.match(migration, /create table if not exists public\.community_posts/);
+  assert.match(migration, /status text not null default 'approved'/);
+  assert.doesNotMatch(board, /localStorage/);
+  assert.match(board, /useState\(HERPITCHES_COMMUNITY\.id\)/);
   assert.match(board, /onTouchStart/);
   assert.match(board, /delta > 60/);
 });
 
-test("following a team or player creates a matching demo community", async () => {
+test("following a team or player exposes a matching server-backed community", async () => {
   const followButton = await source("components/user/follow-button.tsx");
   const clubSelector = await source("components/user/club-selector.tsx");
+  const communityPage = await source("app/(main)/community/page.tsx");
 
-  assert.match(followButton, /createCommunityFromFollow/);
-  assert.match(followButton, /targetType === "team" \|\| targetType === "player"/);
-  assert.match(followButton, /writeCommunityState\(next\)/);
-  assert.match(followButton, /new CustomEvent\("herpitches-follow"/);
-  assert.match(clubSelector, /createCommunityFromFollow/);
-  assert.match(clubSelector, /targetType: "team"/);
+  assert.doesNotMatch(followButton, /localStorage|writeCommunityState|herpitches-follow/);
+  assert.doesNotMatch(clubSelector, /localStorage|writeCommunityState/);
+  assert.match(communityPage, /getMyFollows/);
+  assert.match(communityPage, /createCommunityFromFollow/);
+});
+
+test("community posts support post likes and personal history", async () => {
+  const types = await source("types/community.ts");
+  const validation = await source("lib/validation/interaction-schema.ts");
+  const postValidation = await source("lib/validation/post-schema.ts");
+  const mePage = await source("app/(main)/me/page.tsx");
+  const myPostsPage = await source("app/(main)/me/posts/page.tsx");
+
+  assert.match(types, /LikeTargetType = "article" \| "comment" \| "post"/);
+  assert.match(validation, /\["article", "comment", "post"\]/);
+  assert.match(postValidation, /content\.length < 2/);
+  assert.match(postValidation, /content\.length > maxLength/);
+  assert.match(mePage, /href="\/me\/posts" label="我的帖子"/);
+  assert.match(myPostsPage, /getMyCommunityPosts/);
 });
