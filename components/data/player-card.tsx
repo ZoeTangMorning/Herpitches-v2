@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PlayerAvatar } from "@/components/data/player-avatar";
 import { formatNumber, formatPlayerName } from "@/lib/formatters/player";
 import type { Player, PlayerDetail } from "@/types/wsl";
 
@@ -12,9 +13,7 @@ export function PlayerCard({ player, linked = true }: PlayerCardProps) {
   const content = (
     <div className="rounded-md border border-line bg-white p-4 shadow-panel">
       <div className="flex items-center gap-4">
-        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md bg-surface text-sm font-black text-brand">
-          {player.avatarUrl ? <img src={player.avatarUrl} alt={`${player.name} 头像`} className="h-14 w-14 rounded-md object-cover" /> : player.name.slice(0, 2)}
-        </div>
+        <PlayerAvatar label={player.name} src={player.avatarUrl} />
         <div className="min-w-0">
           <h3 className="truncate text-base font-black text-ink">{formatPlayerName(player)}</h3>
           <p className="mt-1 truncate text-sm text-muted">{player.position ?? "位置待定"}</p>

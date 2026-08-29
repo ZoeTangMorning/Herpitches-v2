@@ -1,4 +1,5 @@
 import { WSL_LEAGUE_ID, WSL_LEAGUE_NAME } from "@/lib/wsl-api/constants";
+import { localizeCountry, localizeEventName, localizeLeagueName, localizePlayerName, localizePosition, localizeStatName, localizeTeamDescription, localizeTeamName } from "@/lib/wsl-api/localization";
 import type { Fixture, FixtureStatus, LineupPlayer, MatchDetail, MatchEvent, MatchStat, Player, PlayerDetail, StandingRow, Team, TeamDetail } from "@/types/wsl";
 
 type RawRecord = Record<string, unknown>;
@@ -30,25 +31,28 @@ function startsAt(raw: RawRecord) {
 }
 
 export function normalizeTeam(raw: RawRecord): Team {
+  const originalName = text(raw, "strTeam") ?? "暂未提供";
   return {
     id: text(raw, "idTeam") ?? "unknown-team",
-    name: text(raw, "strTeam") ?? "暂未提供",
-    originalName: text(raw, "strTeam") ?? "暂未提供",
+    name: localizeTeamName(originalName),
+    originalName,
     leagueId: text(raw, "idLeague") ?? WSL_LEAGUE_ID,
-    leagueName: text(raw, "strLeague") ?? WSL_LEAGUE_NAME,
-    country: text(raw, "strCountry"),
+    leagueName: localizeLeagueName(text(raw, "strLeague") ?? WSL_LEAGUE_NAME),
+    country: localizeCountry(text(raw, "strCountry")),
     badgeUrl: text(raw, "strBadge"),
     website: text(raw, "strWebsite"),
   };
 }
 
 export function normalizePlayer(raw: RawRecord): Player {
+  const originalName = text(raw, "strPlayer") ?? "暂未提供";
   return {
     id: text(raw, "idPlayer") ?? "unknown-player",
-    name: text(raw, "strPlayer") ?? "暂未提供",
-    originalName: text(raw, "strPlayer") ?? "暂未提供",
-    position: text(raw, "strPosition"),
-    nationality: text(raw, "strNationality"),
+    name: originalName,
+    originalName,
+    chineseName: localizePlayerName(originalName),
+    position: localizePosition(text(raw, "strPosition")),
+    nationality: localizeCountry(text(raw, "strNationality")),
     avatarUrl: text(raw, "strThumb") ?? text(raw, "strCutout"),
   };
 }
@@ -57,7 +61,7 @@ export function normalizePlayerDetail(raw: RawRecord, stats?: RawRecord): Player
   return {
     ...normalizePlayer(raw),
     teamId: text(raw, "idTeam"),
-    teamName: text(raw, "strTeam"),
+    teamName: localizeTeamName(text(raw, "strTeam")),
     bornAt: text(raw, "dateBorn"),
     description: text(raw, "strDescriptionEN"),
     stats: stats
@@ -75,9 +79,10 @@ export function normalizePlayerDetail(raw: RawRecord, stats?: RawRecord): Player
 }
 
 export function normalizeTeamDetail(raw: RawRecord, players: RawRecord[]): TeamDetail {
+  const teamId = text(raw, "idTeam");
   return {
     ...normalizeTeam(raw),
-    description: text(raw, "strDescriptionEN"),
+    description: localizeTeamDescription(teamId, text(raw, "strDescriptionEN")),
     stadium: text(raw, "strStadium"),
     formedYear: text(raw, "intFormedYear"),
     players: players.map(normalizePlayer),
@@ -89,11 +94,11 @@ export function normalizeFixture(raw: RawRecord): Fixture {
     id: text(raw, "idEvent") ?? "unknown-match",
     season: text(raw, "strSeason") ?? "",
     leagueId: text(raw, "idLeague") ?? WSL_LEAGUE_ID,
-    leagueName: text(raw, "strLeague") ?? WSL_LEAGUE_NAME,
+    leagueName: localizeLeagueName(text(raw, "strLeague") ?? WSL_LEAGUE_NAME),
     homeTeamId: text(raw, "idHomeTeam"),
     awayTeamId: text(raw, "idAwayTeam"),
-    homeTeamName: text(raw, "strHomeTeam") ?? "暂未提供",
-    awayTeamName: text(raw, "strAwayTeam") ?? "暂未提供",
+    homeTeamName: localizeTeamName(text(raw, "strHomeTeam")),
+    awayTeamName: localizeTeamName(text(raw, "strAwayTeam")),
     startsAt: startsAt(raw),
     venue: text(raw, "strVenue"),
     status: status(raw),
@@ -106,7 +111,7 @@ export function normalizeStandingRow(raw: RawRecord): StandingRow {
   return {
     rank: num(raw, "intRank") ?? 0,
     teamId: text(raw, "idTeam"),
-    teamName: text(raw, "strTeam") ?? "暂未提供",
+    teamName: localizeTeamName(text(raw, "strTeam")),
     played: num(raw, "intPlayed"),
     wins: num(raw, "intWin"),
     draws: num(raw, "intDraw"),
@@ -130,13 +135,13 @@ export function normalizeMatchDetail(raw: RawRecord, lineups: RawRecord[], timel
 }
 
 function normalizeMatchEvent(raw: RawRecord): MatchEvent {
-  return { minute: num(raw, "intTime"), teamName: text(raw, "strTeam"), playerName: text(raw, "strPlayer"), type: text(raw, "strTimeline") ?? "event" };
+  return { minute: num(raw, "intTime"), teamName: localizeTeamName(text(raw, "strTeam")), playerName: text(raw, "strPlayer"), type: localizeEventName(text(raw, "strTimeline")) };
 }
 
 function normalizeMatchStat(raw: RawRecord): MatchStat {
-  return { name: text(raw, "strStat") ?? "统计", homeValue: text(raw, "intHome"), awayValue: text(raw, "intAway") };
+  return { name: localizeStatName(text(raw, "strStat")), homeValue: text(raw, "intHome"), awayValue: text(raw, "intAway") };
 }
 
 function normalizeLineupPlayer(raw: RawRecord): LineupPlayer {
-  return { playerId: text(raw, "idPlayer"), playerName: text(raw, "strPlayer") ?? "暂未提供", teamName: text(raw, "strTeam"), position: text(raw, "strPosition") };
+  return { playerId: text(raw, "idPlayer"), playerName: text(raw, "strPlayer") ?? "暂未提供", teamName: localizeTeamName(text(raw, "strTeam")), position: localizePosition(text(raw, "strPosition")) };
 }

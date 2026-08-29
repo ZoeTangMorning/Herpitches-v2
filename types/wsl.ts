@@ -46,11 +46,33 @@ export type PlayerStats = {
   minutes?: number;
 };
 
+export type PlayerTransfer = {
+  clubName: string;
+  from: string;
+  to: string;
+};
+
+export type PlayerFixture = {
+  id: string;
+  dateLabel: string;
+  timeLabel: string;
+  leagueName: string;
+  homeTeamName: string;
+  awayTeamName: string;
+  homeTeamBadgeUrl?: string;
+  awayTeamBadgeUrl?: string;
+};
+
 export type PlayerDetail = Player & {
   teamId?: string;
   teamName?: string;
+  shirtNumber?: number;
+  marketValue?: string;
   bornAt?: string;
   description?: string;
+  transfers?: PlayerTransfer[];
+  recentFixtures?: PlayerFixture[];
+  statsSeason?: string;
   stats?: PlayerStats;
 };
 
